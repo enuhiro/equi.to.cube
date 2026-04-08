@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>360toCube — 使い方ガイド</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
+  :root{--bg:#0a0a0f;--surface:#12121a;--border:#2a2a3a;--accent:#c8ff5a;--accent2:#5af0ff;--text:#e8e8f0;--muted:#666680;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;line-height:1.8;padding-bottom:60px;}
+
+  /* ヘッダー */
+  header{
+    padding:28px 24px 20px;
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(135deg,rgba(200,255,90,.05) 0%,transparent 60%);
+  }
+  .logo{font-family:'Space Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px;}
+  h1{font-size:24px;font-weight:700;margin-bottom:6px;}
+  .subtitle{font-size:13px;color:var(--muted);font-weight:300;}
+
+  /* ナビ */
+  nav{
+    position:sticky;top:0;z-index:10;
+    background:rgba(10,10,15,.95);
+    border-bottom:1px solid var(--border);
+    padding:10px 20px;
+    display:flex;gap:6px;flex-wrap:wrap;
+    backdrop-filter:blur(10px);
+  }
+  nav a{
+    font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted);text-decoration:none;
+    padding:5px 10px;border:1px solid var(--border);border-radius:20px;
+    transition:all .2s;white-space:nowrap;
+  }
+  nav a:hover{border-color:var(--accent2);color:var(--accent2);}
+
+  /* メイン */
+  main{max-width:720px;margin:0 auto;padding:32px 20px;}
+
+  /* セクション */
+  section{margin-bottom:48px;}
+  .section-num{
+    font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);
+    letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px;
+  }
+  h2{font-size:18px;font-weight:700;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+  h3{font-size:14px;font-weight:500;color:var(--accent2);margin:20px 0 8px;}
+  p{font-size:13px;color:#c0c0d0;margin-bottom:12px;}
+
+  /* ステップ */
+  .steps{display:flex;flex-direction:column;gap:12px;}
+  .step{
+    display:flex;gap:14px;align-items:flex-start;
+    background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;
+  }
+  .step-num{
+    font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--accent);
+    background:rgba(200,255,90,.1);border:1px solid rgba(200,255,90,.3);
+    border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .step-body{flex:1;}
+  .step-title{font-size:13px;font-weight:500;margin-bottom:4px;}
+  .step-desc{font-size:12px;color:var(--muted);line-height:1.7;}
+
+  /* パラメーター表 */
+  .param-list{display:flex;flex-direction:column;gap:8px;}
+  .param{
+    display:grid;grid-template-columns:140px 1fr;gap:10px;
+    background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;
+    align-items:start;
+  }
+  .param-name{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent2);}
+  .param-desc{font-size:12px;color:var(--muted);line-height:1.6;}
+
+  /* 注意ボックス */
+  .notice{
+    background:rgba(200,255,90,.06);border:1px solid rgba(200,255,90,.25);
+    border-radius:8px;padding:14px 16px;margin:16px 0;
+  }
+  .notice-title{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;}
+  .notice p{font-size:12px;color:#b0c070;margin-bottom:0;}
+
+  .notice-blue{
+    background:rgba(90,240,255,.06);border:1px solid rgba(90,240,255,.25);
+    border-radius:8px;padding:14px 16px;margin:16px 0;
+  }
+  .notice-blue .notice-title{color:var(--accent2);}
+  .notice-blue p{color:#90d0e0;}
+
+  /* タグ */
+  .tag{
+    display:inline-block;font-family:'Space Mono',monospace;font-size:9px;
+    padding:2px 8px;border-radius:20px;border:1px solid;margin-right:4px;vertical-align:middle;
+  }
+  .tag-green{border-color:rgba(200,255,90,.4);color:var(--accent);background:rgba(200,255,90,.08);}
+  .tag-blue{border-color:rgba(90,240,255,.4);color:var(--accent2);background:rgba(90,240,255,.08);}
+
+  /* フロー図 */
+  .flow{display:flex;flex-direction:column;gap:4px;margin:16px 0;}
+  .flow-item{
+    background:var(--surface);border:1px solid var(--border);border-radius:6px;
+    padding:10px 14px;font-size:12px;display:flex;align-items:center;gap:10px;
+  }
+  .flow-icon{font-size:16px;flex-shrink:0;}
+  .flow-arrow{text-align:center;color:var(--muted);font-size:16px;padding:0 4px;}
+
+  /* フッター */
+  footer{text-align:center;padding:32px 20px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">360toCube — User Guide</div>
+  <h1>使い方ガイド</h1>
+  <div class="subtitle">エクイレクタングラー（360°写真）を立方体に投影するツール</div>
+</header>
+
+<nav>
+  <a href="#start">はじめに</a>
+  <a href="#basic">基本の流れ</a>
+  <a href="#view">視点調整</a>
+  <a href="#box">箱の設定</a>
+  <a href="#bg">背景・比率</a>
+  <a href="#save">保存</a>
+  <a href="#anim">連番画像</a>
+  <a href="#tips">Tips</a>
+  <a href="#license">利用規約</a>
+</nav>
+
+<main>
+
+  <!-- はじめに -->
+  <section id="start">
+    <div class="section-num">00 — Overview</div>
+    <h2>このツールについて</h2>
+    <p>360°カメラで撮影したエクイレクタングラー画像を、立方体（キューブ）の外側に投影して1枚の画像として出力するツールです。</p>
+    <div class="flow">
+      <div class="flow-item"><span class="flow-icon">🌐</span>360°写真（エクイレクタングラー）を読み込む</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-item"><span class="flow-icon">📐</span>視点・箱の向きを調整</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-item"><span class="flow-icon">🎨</span>レンダリングしてプレビュー確認</div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-item"><span class="flow-icon">💾</span>JPGまたはPNGで保存</div>
+    </div>
+    <div class="notice-blue">
+      <div class="notice-title">📱 iPhone / iOS をお使いの方へ</div>
+      <p>保存は「🔗 画像を新タブで開く」を押し、表示された画像を<strong>長押し → 「写真に追加」</strong>で保存できます。直接ダウンロードはSafariの制限によりできません。</p>
+    </div>
+  </section>
+
+  <!-- 基本の流れ -->
+  <section id="basic">
+    <div class="section-num">01 — Basic</div>
+    <h2>基本の使い方</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">画像を読み込む</div>
+          <div class="step-desc">右パネルの「📂 ドロップ or クリック」エリアをタップして360°写真（エクイレクタングラー）を選択します。2:1の比率の画像が最適です。読み込むと自動でレンダリングが始まります。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">視点と箱を調整する</div>
+          <div class="step-desc">左パネルのスライダーで視点角度や箱の回転を調整します。スライダーを動かすたびに自動でプレビューが更新されます。数値入力欄に直接数字を入力することもできます。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">🎨 レンダリングを押す</div>
+          <div class="step-desc">調整が終わったら右パネルの「🎨 レンダリング」ボタンを押します。進捗バーが表示され、完了するとプレビューに反映されます。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">保存する</div>
+          <div class="step-desc">保存形式（JPG/PNG）と品質を選んで「🔗 画像を新タブで開く」を押します。新しいタブで画像が表示されるので、長押し（iOS）または右クリック（PC）で保存してください。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 視点調整 -->
+  <section id="view">
+    <div class="section-num">02 — View</div>
+    <h2>視点の調整</h2>
+    <h3>📐 視点セクション</h3>
+    <div class="param-list">
+      <div class="param">
+        <div class="param-name">水平回転 Yaw</div>
+        <div class="param-desc">箱の「どの方角」を正面にするかを変えます。360°の写真のどの部分を見るかを切り替えるイメージです。</div>
+      </div>
+      <div class="param">
+        <div class="param-name">垂直回転 Pitch</div>
+        <div class="param-desc">カメラが上下を向きます。プラス方向で天井寄り、マイナスで地面寄りの画角になります。</div>
+      </div>
+      <div class="param">
+        <div class="param-name">見下ろし角度</div>
+        <div class="param-desc">カメラの高さを変えます。数値が大きいほど真上から見下ろす角度になります。標準は30°です。</div>
+      </div>
+    </div>
+
+    <h3>🔀 視点移動セクション</h3>
+    <div class="param-list">
+      <div class="param">
+        <div class="param-name">垂直移動</div>
+        <div class="param-desc">画面全体を上下にずらします。箱の位置を画面内で上下に調整したいときに使います。</div>
+      </div>
+      <div class="param">
+        <div class="param-name">水平移動</div>
+        <div class="param-desc">画面全体を左右にずらします。箱の位置を画面内で左右に調整したいときに使います。</div>
+      </div>
+    </div>
+
+    <div class="notice">
+      <div class="notice-title">💡 方向ボタン「🔄」について</div>
+      <p>右パネルの「🔄 右向き」ボタンを押すたびに、現在のYaw値から90°ずつ回転します。右向き → 背面 → 左向き → 標準 → … と切り替わります。</p>
+    </div>
+  </section>
+
+  <!-- 箱の設定 -->
+  <section id="box">
+    <div class="section-num">03 — Box</div>
+    <h2>箱の回転・形状</h2>
+    <div class="param-list">
+      <div class="param">
+        <div class="param-name">箱の水平回転</div>
+        <div class="param-desc">箱そのものを水平方向に回転させます。見下ろし角度と組み合わせることで、どの面が多く見えるかが変わります。</div>
+      </div>
+      <div class="param">
+        <div class="param-name">箱の垂直回転</div>
+        <div class="param-desc">箱を前後に傾けます。底面や天面の裏側を見たいときに使います。90°で真横から、180°で完全に上下が逆転します。</div>
+      </div>
+      <div class="param">
+        <div class="param-name">高さ比率</div>
+        <div class="param-desc">箱の縦横比を変えます。1.0で正立方体。2.0で縦長の直方体になります。</div>
+      </div>
+      <div class="param">
+        <div class="param-name">視野の広さ</div>
+        <div class="param-desc">箱全体がどれくらいの大きさで表示されるかを変えます。小さくすると箱が画面いっぱいに近づき、大きくすると余白が増えます。</div>
+      </div>
+      <div class="param">
+        <div class="param-name">解像度</div>
+        <div class="param-desc">出力画像の一辺のピクセル数です。大きいほど高画質ですがレンダリングに時間がかかります。SNS投稿なら1024〜2048px推奨です。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 背景・アスペクト比 -->
+  <section id="bg">
+    <div class="section-num">04 — Background</div>
+    <h2>背景とアスペクト比</h2>
+    <h3>🎨 背景</h3>
+    <div class="param-list">
+      <div class="param">
+        <div class="param-name">⬜ 白 / ⬛ 黒</div>
+        <div class="param-desc">箱の周囲を白または黒の単色背景にします。</div>
+      </div>
+      <div class="param">
+        <div class="param-name">🌫 ぼかし</div>
+        <div class="param-desc">読み込んだ360°写真をぼかして背景に敷き詰めます。統一感のある仕上がりになります。デフォルトはこの設定です。</div>
+      </div>
+      <div class="param">
+        <div class="param-name">透明</div>
+        <div class="param-desc">背景を透明にします。PNGで保存すると透過画像として出力されます。他の素材に合成したいときに便利です。</div>
+      </div>
+    </div>
+
+    <h3>📏 アスペクト比</h3>
+    <p>出力画像の縦横比を選べます。立方体は常に正方形のまま中央に配置され、背景だけが指定の比率に広がります。</p>
+    <div class="param-list">
+      <div class="param">
+        <div class="param-name">1:1（正方形）</div>
+        <div class="param-desc">Instagram投稿に最適なスクエアフォーマット。</div>
+      </div>
+      <div class="param">
+        <div class="param-name">3:2 / 4:3</div>
+        <div class="param-desc">一般的な写真の比率。横向き・縦向きを切り替えられます。</div>
+      </div>
+      <div class="param">
+        <div class="param-name">16:9</div>
+        <div class="param-desc">動画・YouTube・X（Twitter）のサムネイルに適したワイドフォーマット。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 保存 -->
+  <section id="save">
+    <div class="section-num">05 — Save</div>
+    <h2>保存方法</h2>
+    <h3>保存形式の選び方</h3>
+    <div class="param-list">
+      <div class="param">
+        <div class="param-name"><span class="tag tag-blue">JPG</span></div>
+        <div class="param-desc">ファイルサイズが小さくSNSへの投稿に向いています。品質スライダーで圧縮率を調整できます（推奨：85〜95）。デフォルトはJPGです。</div>
+      </div>
+      <div class="param">
+        <div class="param-name"><span class="tag tag-green">PNG</span></div>
+        <div class="param-desc">劣化なしの可逆圧縮。「透明」背景を使う場合は必ずPNGを選んでください。ファイルサイズは大きくなります。</div>
+      </div>
+    </div>
+    <h3>iPhoneでの保存手順</h3>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「🔗 画像を新タブで開く」をタップ</div><div class="step-desc">新しいタブに画像と操作説明が表示されます。</div></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">画像を長押し</div><div class="step-desc">メニューが表示されます。</div></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「写真に追加」または「"ファイル"に保存」を選択</div><div class="step-desc">カメラロールまたはファイルアプリに保存されます。</div></div></div>
+    </div>
+  </section>
+
+  <!-- 連番画像 -->
+  <section id="anim">
+    <div class="section-num">06 — Sequence</div>
+    <h2>連番画像の出力</h2>
+    <div class="notice">
+      <div class="notice-title">⚠️ 動画ファイルは出力されません</div>
+      <p>この機能は<strong>連番の静止画（JPG/PNG）</strong>を出力します。CapCut・プレミアプロ・iMovieなどの動画編集アプリで動画化してください。</p>
+    </div>
+    <h3>使い方</h3>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">「🎬 連番画像出力 OFF」をタップしてONにする</div><div class="step-desc">左パネルのアニメ設定が有効になります。</div></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">回転モードとフレーム数を選ぶ</div><div class="step-desc">水平回転（箱の水平回転を1周）・垂直回転（垂直回転を1周）・水平＋垂直から選択。フレーム数は12/24/36枚。</div></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">「▶ 連番画像を生成」を押す</div><div class="step-desc">全フレームが順番にレンダリングされます。解像度が高いと時間がかかります。アニメ用には512〜1024px推奨。</div></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">「▶ プレビュー再生」で確認</div><div class="step-desc">アプリ内でループ再生できます。fpsスライダーで速度を調整してください。</div></div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-body"><div class="step-title">「🔗 フレームを新タブで開く」で保存</div><div class="step-desc">新タブに全フレームのサムネイルが表示されます。各画像を長押し（iOS）→「写真に追加」で保存してください。</div></div></div>
+    </div>
+    <h3>動画化の目安</h3>
+    <div class="param-list">
+      <div class="param"><div class="param-name">12枚 × 0.1秒</div><div class="param-desc">1.2秒でループ。軽快な回転。</div></div>
+      <div class="param"><div class="param-name">24枚 × 0.1秒</div><div class="param-desc">2.4秒でループ。なめらかでバランスが良い。おすすめ。</div></div>
+      <div class="param"><div class="param-name">36枚 × 0.1秒</div><div class="param-desc">3.6秒でループ。ゆっくりした回転。</div></div>
+    </div>
+  </section>
+
+  <!-- Tips -->
+  <section id="tips">
+    <div class="section-num">07 — Tips</div>
+    <h2>使いこなしのヒント</h2>
+    <h3>🎲 ランダムボタンを活用する</h3>
+    <p>「🎲 ランダム」を押すたびに全パラメーターがランダムに変わります。思わぬ面白い構図が見つかることがあります。気に入らなければ「↩ 戻す」で元に戻せます。</p>
+    <h3>↩ 戻す / ↪ 進む</h3>
+    <p>スライダーを動かすたびに状態が記録されます（最大50件）。「↩ 戻す」で1つ前の設定に戻り、「↪ 進む」でやり直せます。試行錯誤しながら調整できます。</p>
+    <h3>連番画像は低解像度で試す</h3>
+    <p>アニメ生成前に解像度を512〜768pxに下げてプレビュー確認すると時間を節約できます。動きが気に入ったら解像度を上げて本番生成しましょう。</p>
+    <h3>背景「ぼかし」は画像で変わる</h3>
+    <p>ぼかし背景は読み込んだ360°写真から自動生成されるため、写真ごとに異なる色合いの背景になります。夜景なら暖色系、昼間なら青空系など、自然なグラデーションになります。</p>
+    <div class="notice-blue">
+      <div class="notice-title">💡 GitHub Pagesで使う場合</div>
+      <p>GitHubリポジトリにHTMLファイルをアップしてPages設定をすると、URLが発行されます。iPhoneのSafariから直接アクセスして使えます。保存も通常のダウンロードとして機能します。</p>
+    </div>
+  </section>
+
+</main>
+
+  <!-- 利用規約 -->
+  <section id="license" style="max-width:720px;margin:0 auto 0;padding:0 20px 48px;">
+    <div class="section-num">08 — License</div>
+    <h2>利用規約 / License</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">
+      本ツールはAIアシスタント（Claude / Anthropic）との協働により制作されました。
+    </p>
+
+    <h3>✅ 自由に使えること</h3>
+    <div class="param-list">
+      <div class="param">
+        <div class="param-name">個人・商用利用</div>
+        <div class="param-desc">個人・商用を問わず無償で利用できます。</div>
+      </div>
+      <div class="param">
+        <div class="param-name">改変・再配布・販売</div>
+        <div class="param-desc">自由に改変・再配布・販売することができます。</div>
+      </div>
+    </div>
+
+    <h3>🤝 お願い（強制ではありません）</h3>
+    <div class="notice-blue">
+      <div class="notice-title">販売・商用利用の際のご連絡</div>
+      <p>販売・商用利用の際は Instagram（<strong>@h1r0k1_n</strong>）にご一報いただけると嬉しいです。対価は求めません。</p>
+    </div>
+
+    <h3>🐛 バグ・不具合について</h3>
+    <div class="notice">
+      <div class="notice-title">技術的な対応はできません</div>
+      <p>本ツールはAIとの協働で制作されており、制作者本人による技術的なバグ修正・サポート対応はできません。予告なく公開を終了する場合があります。ご了承ください。</p>
+    </div>
+
+    <h3>⚖️ 免責事項</h3>
+    <p>本ツールの利用によって生じたいかなる損害についても、制作者は責任を負いません。動作保証はありません。</p>
+
+    <div style="margin-top:24px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);line-height:2;">
+      © 2026 えぬひろ (N_hiro)<br>
+      Instagram: <a href="https://www.instagram.com/h1r0k1_n/" style="color:var(--accent2);text-decoration:none;">@h1r0k1_n</a><br>
+      Built with Claude (Anthropic)
+    </div>
+  </section>
+
+<footer>
+  360toCube — User Guide &nbsp;|&nbsp; © 2026 えぬひろ (N_hiro) &nbsp;|&nbsp; Built with Claude (Anthropic)
+</footer>
+
+</body>
+</html>
