@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>equi_cube - Stable Edition</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <style>
+        :root { --primary: #4CAF50; --bg: #1a1a1a; --card: #2d2d2d; }
+        body { font-family: sans-serif; background: var(--bg); color: #fff; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 1000px; text-align: center; }
+        h1 { font-weight: 300; letter-spacing: 2px; color: var(--primary); }
+        .mode-switcher { margin-bottom: 20px; display: flex; gap: 10px; justify-content: center; }
+        .mode-btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; background: #444; color: white; font-weight: bold; }
+        .mode-btn.active { background: var(--primary); }
+
+        /* E2C結果グリッド */
+        .cube-grid-result {
+            display: grid;
+            grid-template-areas:
+                ".  py .  . "
+                "nx pz px nz"
+                ".  ny .  . ";
+            gap: 10px;
+            justify-content: center;
+            margin: 20px auto;
+            width: fit-content;
+            display: none;
+        }
+        .face-result {
+            width: 150px;
+            height: 150px;
+            background: var(--card);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid #555;
+            transition: border-color 0.2s;
+        }
+        .face-result:hover { border-color: var(--primary); }
+        .face-result canvas { width: 100%; height: 100%; display: block; }
+        .face-result .save-label {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.75); color: #fff; font-size: 11px;
+            padding: 3px 0; text-align: center; pointer-events: none;
+        }
+        .face-result .face-name {
+            position: absolute; top: 4px; left: 6px;
+            color: rgba(255,255,255,0.7); font-size: 11px; pointer-events: none;
+        }
+
+        /* C2E用グリッド */
+        .cube-grid {
+            display: grid;
+            grid-template-areas:
+                ".  py .  . "
+                "nx pz px nz"
+                ".  ny .  . ";
+            gap: 15px;
+            justify-content: center;
+            margin: 40px auto;
+            width: fit-content;
+        }
+        .face-slot {
+            width: 160px; height: 160px; border: 2px dashed #666;
+            background: var(--card); position: relative; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; box-sizing: border-box;
+        }
+        .face-slot.dragover { border-color: var(--primary); background: rgba(76, 175, 80, 0.2); }
+        .face-slot img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+        .face-label { position: absolute; color: #888; font-size: 14px; pointer-events: none; z-index: 5; }
+        .has-img .face-label { bottom: 0; top: auto; width: 100%; background: rgba(0,0,0,0.7); color: #fff; font-size: 11px; padding: 2px 0; }
+
+        .drop-area-full { border: 2px dashed #666; padding: 60px; cursor: pointer; background: var(--card); margin-bottom: 20px; }
+        .drop-area-full.dragover { border-color: var(--primary); background: rgba(76, 175, 80, 0.1); }
+
+        #status { color: #FFC107; font-weight: bold; margin: 15px; min-height: 1.5em; }
+        .btn-action { background: #2196F3; color: white; border: none; padding: 15px 40px; border-radius: 30px; font-weight: bold; cursor: pointer; display: none; margin: 20px auto; }
+        #finalCanvas { max-width: 100%; height: auto; border: 1px solid var(--primary); display: none; margin-top: 20px; }
+        .btn-zip { background: #4CAF50; color: white; border: none; padding: 10px 28px; border-radius: 20px; font-weight: bold; cursor: pointer; display: none; margin: 10px auto; }
+
+        footer {
+            margin-top: 48px;
+            padding: 16px 0 8px;
+            border-top: 1px solid #333;
+            width: 100%;
+            max-width: 1000px;
+            text-align: center;
+            color: #555;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            line-height: 1.8;
+        }
+        footer a { color: #555; text-decoration: none; }
+        footer a:hover { color: #888; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>equi_cube</h1>
+
+    <div class="mode-switcher">
+        <button id="btnE2C" class="mode-btn active" onclick="setMode('E2C')">パノラマ → 6枚</button>
+        <button id="btnC2E" class="mode-btn" onclick="setMode('C2E')">6枚 → パノラマ</button>
+    </div>
+
+    <div id="status"></div>
+
+    <!-- E2C UI -->
+    <div id="uiE2C">
+        <div id="dropZoneE2C" class="drop-area-full">
+            ここにパノラマ画像をドロップ または クリック
+            <input type="file" id="fileE2C" hidden accept="image/*">
+        </div>
+        <!-- 個別保存用グリッド（変換後に表示） -->
+        <div class="cube-grid-result" id="resultGrid">
+            <div class="face-result" style="grid-area:py" data-face="py"><canvas id="rc-py"></canvas><div class="face-name">py</div><div class="save-label">クリックして保存</div></div>
+            <div class="face-result" style="grid-area:nx" data-face="nx"><canvas id="rc-nx"></canvas><div class="face-name">nx</div><div class="save-label">クリックして保存</div></div>
+            <div class="face-result" style="grid-area:pz" data-face="pz"><canvas id="rc-pz"></canvas><div class="face-name">pz</div><div class="save-label">クリックして保存</div></div>
+            <div class="face-result" style="grid-area:px" data-face="px"><canvas id="rc-px"></canvas><div class="face-name">px</div><div class="save-label">クリックして保存</div></div>
+            <div class="face-result" style="grid-area:nz" data-face="nz"><canvas id="rc-nz"></canvas><div class="face-name">nz</div><div class="save-label">クリックして保存</div></div>
+            <div class="face-result" style="grid-area:ny" data-face="ny"><canvas id="rc-ny"></canvas><div class="face-name">ny</div><div class="save-label">クリックして保存</div></div>
+        </div>
+        <button id="btnZip" class="btn-zip">ZIPで一括ダウンロード</button>
+    </div>
+
+    <!-- C2E UI -->
+    <div id="uiC2E" style="display:none;">
+        <div class="cube-grid">
+            <div class="face-slot" style="grid-area: py" data-face="py"><div class="face-label">上 (py)</div><img id="view-py"></div>
+            <div class="face-slot" style="grid-area: nx" data-face="nx"><div class="face-label">左 (nx)</div><img id="view-nx"></div>
+            <div class="face-slot" style="grid-area: pz" data-face="pz"><div class="face-label">前 (pz)</div><img id="view-pz"></div>
+            <div class="face-slot" style="grid-area: px" data-face="px"><div class="face-label">右 (px)</div><img id="view-px"></div>
+            <div class="face-slot" style="grid-area: nz" data-face="nz"><div class="face-label">後 (nz)</div><img id="view-nz"></div>
+            <div class="face-slot" style="grid-area: ny" data-face="ny"><div class="face-label">下 (ny)</div><img id="view-ny"></div>
+        </div>
+        <input type="file" id="fileC2E" hidden accept="image/*">
+    </div>
+
+    <button id="actionBtn" class="btn-action"></button>
+    <canvas id="finalCanvas"></canvas>
+</div>
+
+<footer>
+    © 2026 えぬひろ &nbsp;|&nbsp; equi_cube &nbsp;|&nbsp; Powered by Claude &amp; Gemini
+</footer>
+
+<script>
+    let mode = 'E2C';
+    let targetFace = '';
+    const imgs = {};
+    // 変換済みキャンバスデータを保持（ZIP用）
+    const faceDataURLs = {};
+
+    const FACE_DEFS = [
+        {id:'px', r:[0, -Math.PI/2, 0]},
+        {id:'nx', r:[0,  Math.PI/2, 0]},
+        {id:'py', r:[Math.PI/2, 0, 0]},
+        {id:'ny', r:[-Math.PI/2, 0, 0]},
+        {id:'pz', r:[0, 0, 0]},
+        {id:'nz', r:[0, Math.PI, 0]}
+    ];
+
+    function setMode(m) {
+        mode = m;
+        document.getElementById('btnE2C').classList.toggle('active', m === 'E2C');
+        document.getElementById('btnC2E').classList.toggle('active', m === 'C2E');
+        document.getElementById('uiE2C').style.display = m === 'E2C' ? 'block' : 'none';
+        document.getElementById('uiC2E').style.display = m === 'C2E' ? 'block' : 'none';
+        document.getElementById('status').innerText = '';
+        document.getElementById('actionBtn').style.display = 'none';
+        document.getElementById('finalCanvas').style.display = 'none';
+        document.getElementById('resultGrid').style.display = 'none';
+        document.getElementById('btnZip').style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); }, false);
+        window.addEventListener('drop',     e => { e.preventDefault(); e.stopPropagation(); }, false);
+
+        // E2C
+        const dzE2C = document.getElementById('dropZoneE2C');
+        dzE2C.onclick = () => document.getElementById('fileE2C').click();
+        dzE2C.addEventListener('dragover',  () => dzE2C.classList.add('dragover'));
+        dzE2C.addEventListener('dragleave', () => dzE2C.classList.remove('dragover'));
+        dzE2C.addEventListener('drop', e => {
+            dzE2C.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) processE2C(e.dataTransfer.files[0]);
+        });
+        document.getElementById('fileE2C').onchange = e => processE2C(e.target.files[0]);
+
+        // 個別保存クリック
+        document.querySelectorAll('.face-result').forEach(el => {
+            el.onclick = () => {
+                const face = el.getAttribute('data-face');
+                const url = faceDataURLs[face];
+                if (!url) return;
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${face}.jpg`;
+                a.click();
+            };
+        });
+
+        // ZIP一括
+        document.getElementById('btnZip').onclick = async () => {
+            const zip = new JSZip();
+            for (const [id, url] of Object.entries(faceDataURLs)) {
+                zip.file(`${id}.jpg`, url.split(',')[1], {base64: true});
+            }
+            const blob = await zip.generateAsync({type: 'blob'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'cube_faces.zip';
+            a.click();
+        };
+
+        // C2E
+        document.querySelectorAll('.face-slot').forEach(slot => {
+            slot.onclick = () => {
+                targetFace = slot.getAttribute('data-face');
+                document.getElementById('fileC2E').click();
+            };
+            slot.addEventListener('dragover',  () => slot.classList.add('dragover'));
+            slot.addEventListener('dragleave', () => slot.classList.remove('dragover'));
+            slot.addEventListener('drop', e => {
+                slot.classList.remove('dragover');
+                targetFace = slot.getAttribute('data-face');
+                if (e.dataTransfer.files[0]) loadFace(e.dataTransfer.files[0]);
+            });
+        });
+        document.getElementById('fileC2E').onchange = e => loadFace(e.target.files[0]);
+    });
+
+    // C2E：1枚ロード
+    async function loadFace(file) {
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        const imgDisplay = document.getElementById(`view-${targetFace}`);
+        imgDisplay.src = url;
+        imgDisplay.parentElement.classList.add('has-img');
+
+        const img = new Image();
+        img.src = url;
+        await img.decode();
+        imgs[targetFace] = img;
+
+        if (Object.keys(imgs).length === 6) {
+            const b = document.getElementById('actionBtn');
+            b.innerText = 'パノラマ画像を生成 (2K)';
+            b.style.display = 'block';
+            b.onclick = processC2E;
+        }
+    }
+
+    // =============================================
+    // E2C：パノラマ → 6枚  (Three.js WebGL)
+    // =============================================
+    async function processE2C(file) {
+        if (!file) return;
+        const st = document.getElementById('status');
+        st.innerText = '変換中...';
+
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        await img.decode();
+
+        const size = 1024;
+        const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+        renderer.setSize(size, size);
+        const scene = new THREE.Scene();
+        const cam   = new THREE.PerspectiveCamera(90, 1, 0.1, 1000);
+        const tex   = new THREE.CanvasTexture(img);
+        const mesh  = new THREE.Mesh(
+            new THREE.SphereGeometry(10, 64, 64),
+            new THREE.MeshBasicMaterial({map: tex, side: THREE.BackSide})
+        );
+        mesh.scale.set(-1, 1, 1);
+        scene.add(mesh);
+
+        // 結果グリッドをクリア
+        Object.keys(faceDataURLs).forEach(k => delete faceDataURLs[k]);
+
+        for (const f of FACE_DEFS) {
+            cam.rotation.set(...f.r);
+            renderer.render(scene, cam);
+
+            // サムネ用canvasに描画
+            const thumbCanvas = document.getElementById(`rc-${f.id}`);
+            thumbCanvas.width  = size;
+            thumbCanvas.height = size;
+            thumbCanvas.getContext('2d').drawImage(renderer.domElement, 0, 0);
+
+            // dataURL保存（個別 & ZIP両用）
+            faceDataURLs[f.id] = thumbCanvas.toDataURL('image/jpeg', 0.92);
+        }
+
+        renderer.dispose();
+
+        document.getElementById('resultGrid').style.display = 'grid';
+        document.getElementById('btnZip').style.display     = 'block';
+        st.innerText = '変換完了！　各パネルをクリックで1枚ずつ保存、またはZIPで一括保存';
+    }
+
+    // =============================================
+    // C2E：6枚 → パノラマ  (純粋なCPU変換)
+    // WebGLCubeRenderTarget は r128 で不安定なため
+    // 直接ピクセルマッピングで変換する
+    // =============================================
+    async function processC2E() {
+        const st = document.getElementById('status');
+        st.innerText = '合成中... しばらくお待ちください';
+        document.getElementById('actionBtn').style.display = 'none';
+
+        // UIブロックを避けるため1フレーム待つ
+        await new Promise(r => setTimeout(r, 50));
+
+        const width  = 2048;
+        const height = 1024;
+
+        // 6面をcanvasに描画してImageDataを取得
+        const faceSize = 1024;
+        const faceImages = {};
+        for (const [id, img] of Object.entries(imgs)) {
+            const c = document.createElement('canvas');
+            c.width = c.height = faceSize;
+            c.getContext('2d').drawImage(img, 0, 0, faceSize, faceSize);
+            faceImages[id] = c.getContext('2d').getImageData(0, 0, faceSize, faceSize);
+        }
+
+        const out    = document.getElementById('finalCanvas');
+        out.width    = width;
+        out.height   = height;
+        const ctx    = out.getContext('2d');
+        const outImg = ctx.createImageData(width, height);
+        const data   = outImg.data;
+
+        // 球面 → キューブ面のマッピング
+        function sampleFace(faceId, u, v) {
+            const fd = faceImages[faceId];
+            if (!fd) return [0,0,0];
+            const x = Math.min(faceSize - 1, Math.max(0, Math.floor(u * faceSize)));
+            const y = Math.min(faceSize - 1, Math.max(0, Math.floor(v * faceSize)));
+            const i = (y * faceSize + x) * 4;
+            return [fd.data[i], fd.data[i+1], fd.data[i+2]];
+        }
+
+        function sampleCube(dx, dy, dz) {
+            const ax = Math.abs(dx), ay = Math.abs(dy), az = Math.abs(dz);
+            let face, u, v;
+            if (ax >= ay && ax >= az) {
+                if (dx > 0) { face = 'px'; u = (-dz/ax+1)/2; v = (-dy/ax+1)/2; }
+                else        { face = 'nx'; u = ( dz/ax+1)/2; v = (-dy/ax+1)/2; }
+            } else if (ay >= ax && ay >= az) {
+                if (dy > 0) { face = 'py'; u = ( dx/ay+1)/2; v = ( dz/ay+1)/2; }
+                else        { face = 'ny'; u = ( dx/ay+1)/2; v = (-dz/ay+1)/2; }
+            } else {
+                if (dz > 0) { face = 'pz'; u = ( dx/az+1)/2; v = (-dy/az+1)/2; }
+                else        { face = 'nz'; u = (-dx/az+1)/2; v = (-dy/az+1)/2; }
+            }
+            return sampleFace(face, u, v);
+        }
+
+        const PI2 = Math.PI * 2;
+        for (let py = 0; py < height; py++) {
+            const theta = (py / height) * Math.PI;       // 0 .. π
+            const sinT  = Math.sin(theta);
+            const cosT  = Math.cos(theta);
+            for (let px = 0; px < width; px++) {
+                const phi = (px / width) * PI2;           // 0 .. 2π
+                const dx =  sinT * Math.sin(phi);
+                const dy =  cosT;
+                const dz =  sinT * Math.cos(phi);
+                const [r, g, b] = sampleCube(dx, dy, dz);
+                const i = (py * width + px) * 4;
+                data[i]   = r;
+                data[i+1] = g;
+                data[i+2] = b;
+                data[i+3] = 255;
+            }
+        }
+
+        ctx.putImageData(outImg, 0, 0);
+        out.style.display = 'block';
+
+        const b = document.getElementById('actionBtn');
+        b.innerText    = 'パノラマ画像を保存';
+        b.style.display = 'block';
+        b.onclick = () => {
+            const a = document.createElement('a');
+            a.href     = out.toDataURL('image/jpeg', 0.95);
+            a.download = 'equi_result.jpg';
+            a.click();
+        };
+        st.innerText = '合成完了！';
+    }
+</script>
+</body>
+</html>
